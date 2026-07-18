@@ -1,0 +1,46 @@
+name: Deploy WeDownload
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Package release
+        run: |
+          mkdir -p pkg/wedownload
+          cp -r config scripts pkg/wedownload/
+          echo "${{ steps.version.outputs.sha }}" > pkg/wedownload/.version
+          cd pkg
+          tar czf wedownload.tar.gz wedownload
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          prerelease: true
+          files: pkg/wedownload.tar.gz
+          body: Auto build ${{ steps.version.outputs.sha }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify webhook
+        env:
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
+        run: |
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -s -X POST "$WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d "{\"service\":\"wedownload\",\"version\":\"${{ steps.version.outputs.sha }}\"}" \
+            || echo "webhook failed (cron will catch up)"
+          else
+            echo "WEBHOOK_URL not set, skipping"
+          fi
