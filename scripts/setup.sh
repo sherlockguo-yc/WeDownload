@@ -5,64 +5,76 @@ set -e
 
 echo "=== WeDownload Setup ==="
 
-# 1. 安装 qBittorrent-nox
-if ! command -v qbittorrent-nox &>/dev/null; then
-    echo "Installing qBittorrent-nox..."
-    apt update && apt install -y qbittorrent-nox unzip
+# 1. 安装 Aria2
+if ! command -v aria2c &>/dev/null; then
+    echo "Installing Aria2..."
+    apt update && apt install -y aria2 unzip
 fi
 
 # 2. 创建下载目录
 mkdir -p /home/sherlockguo/downloads
 
-# 3. 配置 qBittorrent
-#   - 密码由用户通过 Web UI 设置
-#   - 下载目录指向 ~/downloads/
-#   - 启用 VueTorrent 皮肤
-#   - 启动后生成临时密码，用户需登录修改
-echo "Starting qBittorrent to generate config..."
-sudo -u sherlockguo qbittorrent-nox --webui-port=8080 &
-QB_PID=$!
-sleep 3
-kill $QB_PID 2>/dev/null || true
+# 3. Aria2 配置
+mkdir -p /home/sherlockguo/.aria2
+cp config/aria2.conf /home/sherlockguo/.aria2/aria2.conf
+chown -R sherlockguo:sherlockguo /home/sherlockguo/.aria2
+chown -R sherlockguo:sherlockguo /home/sherlockguo/downloads
 
-# 4. 安装 VueTorrent 皮肤
-VUETORRENT_DIR="/home/sherlockguo/.config/qBittorrent/vuetorrent"
-if [ ! -d "$VUETORRENT_DIR" ]; then
-    echo "Downloading VueTorrent..."
-    mkdir -p "$VUETORRENT_DIR"
-    curl -sL https://github.com/WDaan/VueTorrent/releases/latest/download/vuetorrent.zip \
-        -o /tmp/vuetorrent.zip
-    unzip -qo /tmp/vuetorrent.zip -d /tmp/vuetorrent
-    mv /tmp/vuetorrent/vuetorrent/* "$VUETORRENT_DIR/"
-    rm -rf /tmp/vuetorrent /tmp/vuetorrent.zip
+# 4. 安装 AriaNg Web UI
+ARIANG_DIR="/home/sherlockguo/AriaNg"
+if [ ! -f "$ARIANG_DIR/index.html" ]; then
+    echo "Downloading AriaNg..."
+    mkdir -p "$ARIANG_DIR"
+    ARIANG_URL=$(curl -sS --max-time 10 'https://api.github.com/repos/mayswind/AriaNg/releases/latest' | \
+        python3 -c "import sys,json; r=json.load(sys.stdin); [print(a['browser_download_url']) for a in r['assets'] if 'AllInOne' in a['name']]" 2>/dev/null | head -1)
+    curl -sL "$ARIANG_URL" -o /tmp/ariang.zip
+    unzip -qo /tmp/ariang.zip -d "$ARIANG_DIR"
+    rm -f /tmp/ariang.zip
 fi
 
-# 5. 写入 qBittorrent 基础配置
-CONF="/home/sherlockguo/.config/qBittorrent/qBittorrent.conf"
-cat > "$CONF" << 'CONFEOF'
-[BitTorrent]
-Session\BTProtocol=Both
-Session\QueueingSystemEnabled=false
+# 5. 部署 AriaNg 代理（Python 脚本）
+cp scripts/ariang-proxy.py /home/sherlockguo/ariang-proxy.py
 
-[Meta]
-MigrationVersion=6
+# 6. systemd 服务
+cat > /etc/systemd/system/aria2.service << 'SVC'
+[Unit]
+Description=Aria2 (HTTP download engine)
+After=network.target
 
-[Preferences]
-Download\SavePath=/home/sherlockguo/downloads/
-General\Locale=zh_CN
-WebUI\AlternativeUIEnabled=true
-WebUI\RootFolder=/home/sherlockguo/.config/qBittorrent/vuetorrent/
-CONFEOF
-chown sherlockguo:sherlockguo "$CONF"
+[Service]
+Type=simple
+User=sherlockguo
+Group=sherlockguo
+ExecStart=/usr/bin/aria2c --conf-path=/home/sherlockguo/.aria2/aria2.conf
+Restart=on-failure
+RestartSec=10
 
-# 6. 放行防火墙
+[Install]
+WantedBy=multi-user.target
+SVC
+
+cat > /etc/systemd/system/ariang.service << 'SVC'
+[Unit]
+Description=AriaNg Web UI + Aria2 RPC proxy
+After=network.target aria2.service
+
+[Service]
+Type=simple
+User=sherlockguo
+Group=sherlockguo
+ExecStart=/usr/bin/python3 /home/sherlockguo/ariang-proxy.py 8080
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+SVC
+
+systemctl daemon-reload
+systemctl enable --now aria2 ariang
+
+# 7. 放行防火墙
 ufw allow 8080/tcp 2>/dev/null || true
 
-# 7. 安装 systemd unit
-cp config/qbittorrent-nox.service /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now qbittorrent-nox
-
 echo "=== Setup Complete ==="
-echo "qBittorrent Web UI: http://$(hostname -I | awk '{print $1}'):8080"
-echo "Check journal for temporary password: sudo journalctl -u qbittorrent-nox | grep temporary"
+echo "Web UI: https://wedownload.sherlockguo.com"

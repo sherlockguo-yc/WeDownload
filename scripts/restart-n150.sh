@@ -7,9 +7,11 @@ DIR="$HOME/wedownload"
 
 echo "[WeDownload] Restarting..."
 
-# 1. 同步 systemd unit
-sudo cp "$DIR/config/qbittorrent-nox.service" /etc/systemd/system/
-sudo systemctl daemon-reload
+# 1. 复制 Aria2 配置
+if [ -f "$DIR/config/aria2.conf" ]; then
+    mkdir -p "$HOME/.aria2"
+    cp "$DIR/config/aria2.conf" "$HOME/.aria2/aria2.conf"
+fi
 
 # 2. 更新 cloudflared ingress（如果 wedownload 路由还没有则添加）
 INGRESS_FILE="/etc/cloudflared/config.yml"
@@ -29,12 +31,12 @@ if entry not in content:
     fi
 fi
 
-# 3. 重启 qbittorrent
-sudo systemctl restart qbittorrent-nox
+# 3. 重启 AriaNg 代理
+sudo systemctl restart ariang
 
-# 4. 等待并验证
+# 4. 验证
 sleep 2
-if systemctl is-active --quiet qbittorrent-nox; then
+if systemctl is-active --quiet ariang; then
     echo "[WeDownload] Restart OK"
 else
     echo "[WeDownload] Restart FAILED"
