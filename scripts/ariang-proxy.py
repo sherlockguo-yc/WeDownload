@@ -35,6 +35,6 @@ class Proxy(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 6801
-    server = http.server.HTTPServer(('127.0.0.1', port), Proxy)
+    server = http.server.ThreadingHTTPServer(('127.0.0.1', port), Proxy)
     print(f'AriaNg proxy on port {port}')
     server.serve_forever()

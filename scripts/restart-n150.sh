@@ -31,10 +31,15 @@ if entry not in content:
     fi
 fi
 
-# 3. 重启 AriaNg 代理
+# 3. 更新 AriaNg 代理脚本
+if [ -f "$DIR/scripts/ariang-proxy.py" ]; then
+    cp "$DIR/scripts/ariang-proxy.py" "$HOME/ariang-proxy.py"
+fi
+
+# 4. 重启 AriaNg 代理
 sudo systemctl restart ariang
 
-# 4. 验证
+# 5. 验证
 sleep 2
 if systemctl is-active --quiet ariang; then
     echo "[WeDownload] Restart OK"
