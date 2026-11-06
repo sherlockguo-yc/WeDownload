@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WeDownload">
+<title>WeDownload</title>
+<link rel="stylesheet" href="/app.css?v=1">
+</head>
+<body>
+
+<header class="topbar">
+  <span class="brand">WeDownload</span>
+  <span class="stat" id="stat">—</span>
+</header>
+
+<main>
+  <section id="view-tasks" class="view">
+    <div class="segment">
+      <button data-tab="active" class="on">正在下载</button>
+      <button data-tab="waiting">等待中</button>
+      <button data-tab="stopped">已完成</button>
+    </div>
+    <div id="taskList" class="list"><div class="empty">加载中…</div></div>
+  </section>
+
+  <section id="view-files" class="view" hidden>
+    <div class="crumbs" id="crumbs"></div>
+    <div id="fileList" class="list"><div class="empty">加载中…</div></div>
+  </section>
+</main>
+
+<nav class="tabbar">
+  <button data-view="tasks" class="on">任务</button>
+  <button data-view="files">文件</button>
+  <button id="themeBtn">主题</button>
+</nav>
+
+<button class="fab" id="addBtn" aria-label="新建下载">+</button>
+
+<div class="sheet" id="addSheet" hidden>
+  <div class="sheet-body">
+    <h2>新建下载</h2>
+    <textarea id="urlInput" rows="4" placeholder="粘贴下载链接，一行一个&#10;支持 HTTP / HTTPS / FTP / SFTP"></textarea>
+    <div class="sheet-actions">
+      <button class="btn ghost" data-close>取消</button>
+      <button class="btn primary" id="submitAdd">开始下载</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="passSheet" hidden>
+  <div class="sheet-body">
+    <h2 id="passTitle">解压</h2>
+    <p class="hint" id="passHint"></p>
+    <input type="password" id="passInput" placeholder="密码（无密码可留空）">
+    <div class="sheet-actions">
+      <button class="btn ghost" data-close>取消</button>
+      <button class="btn primary" id="submitPass">解压</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="player" hidden>
+  <div class="overlay-bar"><span id="playerName"></span><button data-close>关闭</button></div>
+  <div class="overlay-body" id="playerBody"></div>
+</div>
+
+<div class="overlay" id="reader" hidden>
+  <div class="overlay-bar"><span id="readerPos"></span><button data-close>关闭</button></div>
+  <div class="reader-track" id="readerTrack"></div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="/app.js?v=1"></script>
+</body>
+</html>

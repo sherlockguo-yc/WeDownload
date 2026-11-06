@@ -19,7 +19,7 @@ jobs:
       - name: Package
         run: |
           mkdir -p pkg
-          cp -r config scripts pkg/
+          cp -r config scripts server public pkg/
           cp scripts/restart-n150.sh pkg/restart.sh
           echo "${{ steps.ver.outputs.sha }}" > pkg/.version
           tar -czf wedownload.tar.gz -C pkg .
