@@ -266,7 +266,8 @@ async function extractArchive(filePath, password, outDir) {
     return run(bin, args);
   }
   if (ext === '.zip') {
-    const args = ['-o', '-q'];
+    // 不加 -q，否则 unzip 在密码错误时不输出原因
+    const args = ['-o'];
     if (pass) args.push('-P', pass);
     args.push(filePath, '-d', outDir);
     return run('unzip', args);
@@ -369,11 +370,12 @@ async function handleApi(req, res, url) {
       }
       entries.sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name, 'zh') : a.type === 'dir' ? -1 : 1));
       const relOut = path.relative(DOWNLOADS_DIR, dir);
+      const parentRel = relOut ? path.dirname(relOut) : '';
       // 图片序列自动识别（漫画阅读）
       const imgs = entries.filter((e) => e.kind === 'image').length;
       return sendJson(res, 200, {
         path: relOut,
-        parent: relOut ? path.dirname(relOut) : '',
+        parent: parentRel === '.' ? '' : parentRel,
         entries,
         imageCount: imgs,
       });
@@ -413,7 +415,12 @@ async function handleApi(req, res, url) {
       try {
         await extractArchive(file, body.password || '', outDir);
       } catch (e) {
-        return sendJson(res, 400, { error: e.message });
+        const raw = String(e.message || '');
+        let msg = '解压失败，可能是密码错误或文件已损坏';
+        if (/password|encrypted/i.test(raw)) msg = '密码错误，请重试';
+        else if (/not supported|不支持/.test(raw)) msg = raw;
+        else if (/No space|ENOSPC/i.test(raw)) msg = '磁盘空间不足';
+        return sendJson(res, 400, { error: msg });
       }
       // 解压后若只有一个子目录，自动下沉一层，免得用户多点一次
       let rel = path.relative(DOWNLOADS_DIR, outDir);
